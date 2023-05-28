@@ -6,8 +6,9 @@ import { useState } from 'react';
 //firebase
 import { db, storage } from '../firebase';
 import { uploadBytesResumable,ref, getDownloadURL } from 'firebase/storage';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import Spinner from '../components/Spinner';
+import Loader from '../components/Loader';
 
 
 
@@ -19,19 +20,37 @@ const initializeState = {
 }
 
 const UserController = () => {
-
+  const [loading, setLoading] = useState(false);
   const [data, setData] = useState(initializeState);
   const {name, email, major, contact} = data;
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(null); 
   const [errors, setErrors] = useState(null);
   const [isSubmit, setIsSubmit] = useState(null);
+  const {id} = useParams();
+  console.log(id);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    id && getSingleUser(); 
+    setInterval(() => {
+      setLoading(true);
+    }, 600);
+  },[id])
+
+  const getSingleUser = async () => {
+    const docRef = doc(db, 'users', id);
+    const snapShot = await getDoc(docRef);
+    if (snapShot.exists()){
+      setData({...snapShot.data()});
+    }
+  }
 
   useEffect(()=>{
     const uploadFile = () => {
       const name = new Date().getTime() + file.name;
+      console.log(file)
       const storageRef = ref(storage, file.name);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -56,7 +75,6 @@ const UserController = () => {
       }
       );
     };
-
     file && uploadFile();
   },[file])
 
@@ -90,18 +108,31 @@ const UserController = () => {
 
     //starting of data uploadd
     setIsSubmit(true);
-    await addDoc(collection(db,"users"), {...data, timestamp: serverTimestamp(),});
-    console.log("submited")
-    navigate("/");
 
-    // return (Object.keys(errors).length ? setErrors(errors) : null);
+    if(!id){
+      try{
+        await addDoc(collection(db,"users"), {...data, timestamp: serverTimestamp(),});
+        console.log("submited")
+      }catch(err){
+        console.log(err);
+      }
+    } else {
+      try{
+        await updateDoc(doc(db,"users", id), {...data, timestamp: serverTimestamp(),});
+        console.log("submited")
+      }catch(err){
+        console.log(err);
+      }
+    }
+
+    navigate("/");
   }
 
   return (
     <div className='flex'>
-      {isSubmit?(<Spinner />):
+      {!loading || isSubmit?(<Spinner />):
       <div className='flex flex-col gap-4 w-full'>
-        <h2 className='text-bold'>Add User {name}</h2>
+        <h2 className='text-bold'>{id?"Update User":"Add User"} {name}</h2>
 
         <form onSubmit={handleSubmit} action='' className='flex flex-col text-sm text-slate-500 gap-1'>
 
@@ -150,10 +181,14 @@ const UserController = () => {
 
 
         <span className={`text-red-400`}>{errors && (errors.name +'  '+ errors.email +'  '+errors.major+'  '+errors.contact) }</span>
+        {progress !== null && progress < 100?<Loader />:<img src={data.img} alt="" className={`mt-4 rounded-md transition-all`} />}
+        {progress !== null && progress < 100?<Loader />:<img src={data.img2} alt="" className={`mt-4 rounded-md transition-all`} />}
         <button 
           type="submit"
           disabled={progress !== null && progress < 100}
-          className='mx-auto mt-4 p-2 rounded-md shadow-[rgba(50,_50,_105,_0.15)_0px_2px_5px_0px,_rgba(0,_0,_0,_0.05)_0px_1px_1px_0px]'>Add Student</button>
+          className={`mb-4 disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer mx-auto mt-4 p-2 rounded-md shadow-[rgba(50,_50,_105,_0.15)_0px_2px_5px_0px,_rgba(0,_0,_0,_0.05)_0px_1px_1px_0px]`}>
+          {id?"Update student":"Add student"}
+        </button>
       </form>
     </div>
    }

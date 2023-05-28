@@ -7,7 +7,7 @@ const Navbar = () => {
   return (
     <nav className='flex justify-between py-4 m-auto'>
         <div>
-            <p>Logo</p>
+            <p>N4k M4ME</p>
         </div>
         <div className='flex gap-4'>
             <Link to='/' className='shadow-[rgba(50,_50,_105,_0.15)_0px_2px_5px_0px,_rgba(0,_0,_0,_0.05)_0px_1px_1px_0px] p-2 rounded-sm'>home</Link>
